@@ -1,0 +1,1 @@
+export { RelocationManagerScreen } from './RelocationManagerScreen'

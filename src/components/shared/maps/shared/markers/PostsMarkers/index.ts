@@ -1,0 +1,1 @@
+export { PostsMarkers } from './PostMarkers'

@@ -1,0 +1,21 @@
+{
+  "name": "e2eTests-web",
+  "version": "0.0.1",
+  "description": "Nicity e2e WEB tests",
+  "main": "pages/index.js",
+  "scripts": {
+    "eslint": "eslint . --fix",
+    "eslint-check": "eslint .",
+    "format:prettier": "prettier --write \"**/*.+(js|json|yml|md)\"",
+    "format:prettier-check": "prettier --check \"**/*.+(js|json|yml|md)\"",
+    "pre-commit": "npm run eslint-check | npm run format:prettier-check",
+    "anyTest": "mocha --t 60000 community/auth/QA-TC-36_Login.js",
+    "e2eTests": "mocha-parallel-tests --exit --retries 1 --timeout 10000 community/* --max-parallel 2"
+  },
+  "pre-commit": [
+    "pre-commit"
+  ],
+  "dependencies": {
+    "@qa/tools": "git+ssh://git@gitlab.com:nicity/qa/tools.git#0.0.2"
+  }
+}

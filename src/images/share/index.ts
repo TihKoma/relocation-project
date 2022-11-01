@@ -1,0 +1,5 @@
+export { ReactComponent as EmailIcon } from './email.svg'
+export { ReactComponent as FacebookIcon } from './facebook.svg'
+export { ReactComponent as LinkIcon } from './link.svg'
+export { ReactComponent as TwitterIcon } from './twitter.svg'
+export { ReactComponent as WhatsAppIcon } from './whatsapp.svg'

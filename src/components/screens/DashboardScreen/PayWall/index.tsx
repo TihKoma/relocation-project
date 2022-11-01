@@ -1,0 +1,1 @@
+export { PayWall } from './PayWall'

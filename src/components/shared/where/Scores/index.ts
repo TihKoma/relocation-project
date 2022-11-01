@@ -1,0 +1,1 @@
+export { ScoresComponent } from './ScoresComponent'

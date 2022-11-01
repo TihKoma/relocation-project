@@ -1,0 +1,1 @@
+export { GallerySlideToOverlay } from './GallerySlideToOverlay'

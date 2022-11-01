@@ -1,0 +1,39 @@
+@startuml
+circle Mapbox
+class MapFacade
+class MapPosition
+class MapDrawer
+class MapEvents
+class MapAdapter
+class MapServerApi
+class MarkersDrawer
+class RegionsDrawer
+abstract class MapProvider
+class GeoPositionMapBlock
+class AreaMapFacade
+class AreaMapProvider
+class MapServiceLocator
+circle ReactComponent
+circle ApolloClient
+class GeoPositionMapDrawer
+MapFacade *-- MapPosition
+MapFacade *-- MapEvents
+MapFacade *-- MapServerApi
+MapFacade *-- MapDrawer
+MapFacade *-- GeoPositionMapBlock
+GeoPositionMapBlock *-- GeoPositionMapDrawer
+MapDrawer *-- RegionsDrawer
+MapDrawer *-- MarkersDrawer
+MapPosition *-- MapAdapter
+MapEvents *-- MapAdapter
+RegionsDrawer *-- MapAdapter
+MarkersDrawer *-- MapAdapter
+GeoPositionMapDrawer *-- MapDrawer
+MapProvider <|-- AreaMapProvider
+MapServiceLocator *-- AreaMapProvider
+AreaMapProvider *-- AreaMapFacade
+MapFacade <|-- AreaMapFacade
+ReactComponent .. MapServiceLocator
+MapServerApi *-- ApolloClient
+MapAdapter *-- Mapbox
+@enduml

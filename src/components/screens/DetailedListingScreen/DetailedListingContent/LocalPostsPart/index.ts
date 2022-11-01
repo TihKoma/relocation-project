@@ -1,0 +1,1 @@
+export { LocalPostsPart } from './LocalPostsPart'

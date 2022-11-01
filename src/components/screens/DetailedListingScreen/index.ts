@@ -1,0 +1,1 @@
+export { DetailedListingScreen } from './DetailedListingScreen'

@@ -1,0 +1,5 @@
+export { ReactComponent as AverageScoreEmoji } from './average.svg'
+export { ReactComponent as BadScoreEmoji } from './bad.svg'
+export { ReactComponent as GoodScoreEmoji } from './good.svg'
+export { ReactComponent as OutstandingScoreEmoji } from './outstanding.svg'
+export { ReactComponent as PoorScoreEmoji } from './poor.svg'

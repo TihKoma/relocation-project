@@ -1,0 +1,5 @@
+User-agent: *
+Sitemap: http://nicity.com/sitemap.xml.gz
+Disallow: /feed
+Disallow: /my/settings
+Disallow: /following

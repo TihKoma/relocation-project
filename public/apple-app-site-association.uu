@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "2V2NH67YCJ.com.nicity",
+        "paths": [
+		"/post/*",
+        ]
+      }
+    ]
+  }
+}

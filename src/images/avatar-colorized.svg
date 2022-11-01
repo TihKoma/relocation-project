@@ -1,0 +1,15 @@
+<svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<circle cx="21" cy="21" r="20.5" fill="#C4C4C4"/>
+<circle cx="21" cy="21" r="20.5" fill="url(#pattern0)"/>
+<circle cx="21" cy="21" r="20.5" stroke="white"/>
+<circle cx="21" cy="21" r="21" fill="url(#paint0_linear_990_17047)"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M24.6596 17.723C24.6596 19.6921 23.0814 21.271 21.1116 21.271C19.1425 21.271 17.5637 19.6921 17.5637 17.723C17.5637 15.7539 19.1425 14.175 21.1116 14.175C23.0814 14.175 24.6596 15.7539 24.6596 17.723ZM15.75 25.2875C15.75 23.4639 18.2199 23.008 21.1115 23.008C24.0192 23.008 26.473 23.48 26.473 25.3043C26.473 27.1285 24.0031 27.5838 21.1115 27.5838C18.2045 27.5838 15.75 27.1118 15.75 25.2875Z" fill="white"/>
+<defs>
+<pattern id="pattern0" patternContentUnits="objectBoundingBox" width="1" height="1">
+</pattern>
+<linearGradient id="paint0_linear_990_17047" x1="2.31724" y1="6.16875" x2="44.7908" y2="9.10588" gradientUnits="userSpaceOnUse">
+<stop stop-color="#5D54E6"/>
+<stop offset="0.9375" stop-color="#D0CDFA"/>
+</linearGradient>
+</defs>
+</svg>

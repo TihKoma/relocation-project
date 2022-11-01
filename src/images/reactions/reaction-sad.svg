@@ -1,0 +1,33 @@
+<svg width="23" height="22" viewBox="0 0 23 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_ii_1017:6146)">
+<circle cx="11.3291" cy="11" r="11" fill="#F8B200"/>
+<circle cx="11.3291" cy="11" r="11" fill="url(#paint0_radial_1017:6146)" fill-opacity="0.5"/>
+</g>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M7.32913 18C7.10274 17.8302 7.05216 17.5157 7.24005 17.3041C7.80073 16.6726 9.13698 15.5 11.3291 15.5C13.5217 15.5 14.859 16.6743 15.42 17.3064C15.6075 17.5177 15.5551 17.8305 15.3291 18C15.1065 18.1664 14.7945 18.12 14.5877 17.9344C13.7195 17.155 12.475 17 11.3293 17C10.1835 17 8.93886 17.155 8.07059 17.9344C7.86377 18.12 7.55147 18.1668 7.32913 18Z" fill="black"/>
+<rect x="13.3291" y="9" width="3" height="4" rx="1.5" fill="black"/>
+<path d="M13.1644 6.65333C13.9274 6.44889 14.7308 6.44889 15.4938 6.65333C16.2568 6.85778 16.9525 7.25947 17.5111 7.81802" stroke="black"/>
+<path d="M9.49379 6.65333C8.73079 6.44889 7.92741 6.44889 7.16441 6.65333C6.40142 6.85778 5.70567 7.25947 5.14712 7.81802" stroke="black"/>
+<rect x="6.3291" y="9" width="3" height="4" rx="1.5" fill="black"/>
+<defs>
+<filter id="filter0_ii_1017:6146" x="-2.6709" y="-3" width="26" height="27" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="1" dy="2"/>
+<feGaussianBlur stdDeviation="2"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_1017:6146"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dx="-3" dy="-3"/>
+<feGaussianBlur stdDeviation="3.5"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"/>
+<feBlend mode="normal" in2="effect1_innerShadow_1017:6146" result="effect2_innerShadow_1017:6146"/>
+</filter>
+<radialGradient id="paint0_radial_1017:6146" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(6.3291 5) rotate(55.8855) scale(18.7216)">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="white" stop-opacity="0"/>
+</radialGradient>
+</defs>
+</svg>

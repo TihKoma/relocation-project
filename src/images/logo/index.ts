@@ -1,0 +1,5 @@
+export { ReactComponent as LogoFullWhiteIcon } from './full-logo-white.svg'
+export { ReactComponent as LogoIcon } from './logo.svg'
+export { ReactComponent as LogoFullIcon } from './logo-full.svg'
+export { ReactComponent as LogoTextIcon } from './text-logo.svg'
+export { ReactComponent as LogoTextWhiteICon } from './text-logo-white.svg'

@@ -1,0 +1,49 @@
+---
+.tf_common:
+  image: 701347834014.dkr.ecr.eu-central-1.amazonaws.com/nicity/devops/dockerfiles/cicd:main
+  variables:
+    TF_CLI_ARGS_plan: '-parallelism=30'
+    TF_CLI_ARGS_apply: '-parallelism=30'
+    TF_VAR_gitlab_username: gitlab-ci-token
+    TF_VAR_gitlab_access_token: ${CI_JOB_TOKEN}
+    TF_VAR_image_tag: ${DEPLOY_ENVIRONMENT_NAME}-${CI_COMMIT_SHORT_SHA}
+    TF_VAR_nginx_tag: ${CI_COMMIT_SHORT_SHA}
+    TF_VAR_storybook_tag: ${CI_COMMIT_SHORT_SHA}
+    TF_IN_AUTOMATION: 'true'
+    TF_INPUT: 'false'
+    TF_HTTP_ADDRESS: '${CI_API_V4_URL}/projects/30413421/terraform/state/${TF_VAR_env}-frontend'
+    TF_HTTP_LOCK_ADDRESS: '${TF_HTTP_ADDRESS}/lock'
+    TF_HTTP_LOCK_METHOD: 'POST'
+    TF_HTTP_UNLOCK_ADDRESS: '${TF_HTTP_ADDRESS}/lock'
+    TF_HTTP_UNLOCK_METHOD: 'DELETE'
+    TF_HTTP_USERNAME: 'gitlab-ci-token'
+    TF_HTTP_PASSWORD: '${CI_JOB_TOKEN}'
+    TF_HTTP_RETRY_WAIT_MIN: '5'
+    JQ_PLAN: '([ .resource_changes[ ]?.change.actions? ] | flatten) | {"create":(map(select(.=="create")) | length), "update":(map(select(.=="update")) | length), "delete":(map(select(.=="delete")) | length)}'
+    ECS_CLUSTER: '${TF_VAR_env}'
+  cache:
+    key: terraform-${TF_VAR_env}
+    paths:
+      - .deploy/terraform/${TF_VAR_env}/.terraform
+  before_script:
+    - cd .deploy/terraform/${TF_VAR_env}/
+
+.node:
+  image: 701347834014.dkr.ecr.eu-central-1.amazonaws.com/nicity/devops/dockerfiles/nodejs:16-main
+  interruptible: true
+  variables:
+    FORCE_COLOR: 3
+
+.node_cache:
+  cache:
+    - key:
+        files:
+          - package-lock.json
+          - package.json
+      policy: pull
+      paths:
+        - node_modules/
+
+.ecr_variables:
+  variables:
+    ECR_REGISTRY: 701347834014.dkr.ecr.eu-central-1.amazonaws.com

@@ -1,0 +1,1 @@
+export { ChooseWay } from './ChooseWay'

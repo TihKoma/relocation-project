@@ -1,0 +1,1 @@
+export { FactorsScore } from './FactorsScore'

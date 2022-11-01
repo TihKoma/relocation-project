@@ -1,0 +1,1 @@
+export { PlugsCarousel } from './PlugsCarousel'

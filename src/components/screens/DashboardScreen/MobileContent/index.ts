@@ -1,0 +1,1 @@
+export { MobileContent } from './MobileContent'

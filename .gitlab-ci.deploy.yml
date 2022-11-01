@@ -1,0 +1,161 @@
+---
+include:
+  - local: .gitlab-ci.common.yml
+  - project: nicity/devops/gitlab-ci-templates
+    ref: main
+    file:
+      - templates/tf-apply/.gitlab-ci.yml
+      - templates/kaniko-ecr/.gitlab-ci.yml
+
+stages:
+  - build
+  - build-image
+  - static
+  - apply
+  - verify
+
+variables:
+  ARTIFACT_COMPRESSION_LEVEL: 'fast'
+  CACHE_COMPRESSION_LEVEL: 'fast'
+  GIT_DEPTH: 1
+
+default:
+  tags:
+    - aws-eks-eu-central-1-large
+
+.lighthouse:
+  extends:
+    - .node
+    - .node_cache
+  tags:
+    - aws-eks-eu-central-1-xlarge
+  rules:
+    - if: $DEPLOY_ENVIRONMENT_NAME == 'prod'
+  allow_failure: true
+  image: 701347834014.dkr.ecr.eu-central-1.amazonaws.com/docker-proxy/docker.io/cypress/browsers:node16.13.2-chrome100-ff98
+  variables:
+    GIT_DEPTH: 20
+  script:
+    - npx lhci autorun
+      --config="${LHCI_CONFIG}"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}login"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}feed"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}homes"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}where"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}where/quiz"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}${LHCI_TARGET_LOCATION}"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}${LHCI_TARGET_LOCATION}/homes"
+      --collect.url="${DEPLOY_ENVIRONMENT_URL}${LHCI_TARGET_LOCATION}/posts"
+
+app:build:
+  stage: build
+  extends:
+    - .node
+  tags:
+    - aws-eks-eu-central-1-xlarge
+  rules:
+    - if: $DEPLOY_ENVIRONMENT_NAME == 'storybook'
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  cache:
+    - key:
+        files:
+          - package-lock.json
+          - package.json
+      policy: pull
+      paths:
+        - node_modules/
+    - key: nextjs-build-cache
+      paths:
+        - .next/cache/
+  artifacts:
+    paths:
+      - .next/
+      - public/
+  variables:
+    NODE_ENV: production
+    NEXT_PUBLIC_TOMTOM_API_KEY: '5Ftq0bGYNykzlpz5rbrbsBG9NJx5onw6'
+    NEXT_PUBLIC_MAPBOX_KEY: 'pk.eyJ1IjoibmljaXR5IiwiYSI6ImNreDdieXJiMTA3bXoydm4zdjZhanptcXcifQ.GsxZAVfz1ggbnWhyZ3LOcA'
+    NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_KEY}
+    NEXT_PUBLIC_FACEBOOK_APP_ID: ${NEXT_PUBLIC_FACEBOOK_APP_ID}
+    NEXT_PUBLIC_GOOGLE_APP_ID: ${NEXT_PUBLIC_GOOGLE_APP_ID}
+  script:
+    - npm run build
+
+app:build-image:
+  stage: build-image
+  extends:
+    - .kaniko
+    - .ecr_variables
+  tags:
+    - aws-eks-eu-central-1-large
+  rules:
+    - if: $DEPLOY_ENVIRONMENT_NAME == 'storybook'
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  interruptible: true
+  variables:
+    KANIKO_EXTRA_ARGS: |
+      --context .
+      --dockerfile .deploy/nextjs.dockerfile
+      --destination ${ECR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${DEPLOY_ENVIRONMENT_NAME}-${CI_COMMIT_SHORT_SHA}
+  needs:
+    - app:build
+
+rclone:static:
+  stage: static
+  rules:
+    - if: $DEPLOY_ENVIRONMENT_NAME == 'storybook'
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  image: 701347834014.dkr.ecr.eu-central-1.amazonaws.com/nicity/devops/dockerfiles/cicd:main
+  script:
+    - rclone copy
+      --config .deploy/rclone.conf
+      .next/static/
+      aws-s3:nicity-frontend-public-${AWS_DEFAULT_REGION}/${DEPLOY_ENVIRONMENT_NAME}/_next/static/
+  needs:
+    - app:build
+
+terraform:apply:
+  stage: apply
+  extends:
+    - .tf_common
+    - .tf_apply_logs
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  variables:
+    TF_VAR_NEXT_PUBLIC_WITH_ANALYTICS: ${NEXT_PUBLIC_WITH_ANALYTICS}
+    TF_VAR_NEXT_PUBLIC_CAPTCHA_V3_KEY: ${NEXT_PUBLIC_CAPTCHA_V3_KEY}
+    TF_VAR_NEXT_PUBLIC_SSR_API_HOST: ${NEXT_PUBLIC_SSR_API_HOST}
+    TF_VAR_NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST}
+    TF_VAR_NEXT_PUBLIC_WITH_SENTRY: ${NEXT_PUBLIC_WITH_SENTRY}
+    TF_VAR_NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+  environment:
+    name: ${DEPLOY_ENVIRONMENT_NAME}
+    url: ${DEPLOY_ENVIRONMENT_URL}
+  needs:
+    - job: app:build-image
+      optional: true
+    - job: rclone:static
+      optional: true
+    - pipeline: ${PARENT_PIPELINE_ID}
+      job: gitlab-scripts:pre
+
+lighthouse-desktop:verify:
+  stage: verify
+  extends:
+    - .lighthouse
+  variables:
+    LHCI_CONFIG: .lighthouserc.desktop.js
+
+lighthouse-mobile:verify:
+  stage: verify
+  extends:
+    - .lighthouse
+  variables:
+    LHCI_CONFIG: .lighthouserc.mobile.js

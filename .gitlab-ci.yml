@@ -1,0 +1,373 @@
+---
+include:
+  - local: .gitlab-ci.common.yml
+  - project: nicity/devops/gitlab-ci-templates
+    ref: main
+    file:
+      - templates/gitlab-scripts/.gitlab-ci.yml
+      - templates/kaniko-ecr/.gitlab-ci.yml
+
+stages:
+  - test
+  - pre-build
+  - build
+  - pre-build-image
+  - build-image
+  - pre-deploy
+  - deploy
+
+variables:
+  ARTIFACT_COMPRESSION_LEVEL: "fast"
+  CACHE_COMPRESSION_LEVEL: "fast"
+  GIT_DEPTH: 1
+
+default:
+  tags:
+    - aws-eks-eu-central-1-large
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+
+.deploy:
+  when: manual
+  allow_failure: true
+  variables:
+    DEPLOY_ENVIRONMENT_NAME: ${TF_VAR_env}
+    DEPLOY_ENVIRONMENT_URL: https://${TF_VAR_env}.ci.nicity.io/
+    PARENT_PIPELINE_ID: ${CI_PIPELINE_ID}
+    AWS_DEFAULT_REGION: eu-central-1
+    NEXT_PUBLIC_API_HOST: https://${TF_VAR_env}.ci.nicity.io
+    NEXT_PUBLIC_SSR_API_HOST: http://graphql.nicity-${TF_VAR_env}
+    NEXT_PUBLIC_WITH_ANALYTICS: "false"
+    NEXT_PUBLIC_WITH_SENTRY: "false"
+    LHCI_TARGET_LOCATION: "new-york-hk2fin-manhattan"
+  trigger:
+    strategy: depend
+    include:
+      - local: .gitlab-ci.deploy.yml
+  needs:
+    - nginx:build-image
+    - job: terraform-plan-prod:pre-deploy
+      optional: true
+    - job: node_modules:pre
+      optional: true
+    - job: lint:test
+      optional: true
+    - job: unit:test
+      optional: true
+    - job: security:test
+      optional: true
+
+.deploy_prod:
+  variables:
+    TF_VAR_env: prod
+    DEPLOY_ENVIRONMENT_URL: https://nicity.com/
+    AWS_DEFAULT_REGION: us-east-1
+    NEXT_PUBLIC_API_HOST: https://nicity.com
+    NEXT_PUBLIC_SSR_API_HOST: http://graphql.nicity-prod
+    NEXT_PUBLIC_WITH_ANALYTICS: "true"
+    NEXT_PUBLIC_WITH_SENTRY: "true"
+
+.tests:
+  rules:
+    - if: $CI_MERGE_REQUEST_LABELS =~ /hotfix/
+      when: never
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  needs:
+    - job: node_modules:pre
+      optional: true
+
+.node_modules:
+  extends:
+    - .node
+  tags:
+    - aws-eks-eu-central-1-xlarge
+  cache:
+    - key: npm-download-cache
+      policy: pull-push
+      paths:
+        - .npm/
+    - key:
+        files:
+          - package-lock.json
+          - package.json
+      policy: push
+      paths:
+        - node_modules/
+  script:
+    - npm ci --audit=false --ignore-scripts --cache .npm --prefer-offline
+    - npm rebuild sharp
+
+gitlab-scripts:pre:
+  stage: .pre
+  extends:
+    - .gitlab-scripts
+  interruptible: true
+  variables:
+    GITLAB_SCRIPTS_BRANCH: main
+
+node_modules:pre:
+  stage: .pre
+  extends:
+    - .node_modules
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+      changes:
+        - package-lock.json
+        - package.json
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - package-lock.json
+        - package.json
+
+node_modules_manual:pre:
+  stage: .pre
+  extends:
+    - .node_modules
+  when: manual
+
+lint:test:
+  stage: test
+  extends:
+    - .node
+    - .node_cache
+    - .tests
+  script:
+    - npm run lint
+
+unit:test:
+  stage: test
+  extends:
+    - .node
+    - .node_cache
+    - .tests
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - junit.xml
+  script:
+    - npx jest --ci --reporters=default --reporters=jest-junit
+
+security:test:
+  stage: test
+  extends:
+    - .node
+    - .tests
+  script:
+    - npm audit --audit-level critical --package-lock-only --production
+
+#storybook:build:
+#  stage: build
+#  extends:
+#    - .node
+#    - .node_cache
+#  rules:
+#    - if: $CI_MERGE_REQUEST_LABELS =~ /hotfix/
+#      when: never
+#    - if: $CI_MERGE_REQUEST_ID
+#    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+#  artifacts:
+#    paths:
+#      - storybook-static/
+#  script:
+#    - npm run build-storybook
+#  needs:
+#    - job: node_modules:pre
+#      optional: true
+#    - job: lint:test
+#      optional: true
+#    - job: unit:test
+#      optional: true
+#    - job: security:test
+#      optional: true
+
+ecr:pre-build-image:
+  stage: pre-build-image
+  extends:
+    - .ecr
+  interruptible: true
+  variables:
+    ECR_REPO_LIST: "
+      ${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
+      ${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/nginx
+      ${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/storybook
+    "
+  needs:
+    - gitlab-scripts:pre
+
+nginx:build-image:
+  stage: build-image
+  extends:
+    - .kaniko
+    - .ecr_variables
+  interruptible: true
+  variables:
+    KANIKO_EXTRA_ARGS: |
+      --context .
+      --dockerfile .deploy/nginx.dockerfile
+      --destination ${ECR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/nginx:${CI_COMMIT_SHORT_SHA}
+  needs:
+    - ecr:pre-build-image
+    - job: lint:test
+      optional: true
+    - job: unit:test
+      optional: true
+    - job: security:test
+      optional: true
+
+#storybook:build-image:
+#  stage: build-image
+#  extends:
+#    - .kaniko
+#    - .ecr_variables
+#  rules:
+#    - if: $CI_MERGE_REQUEST_LABELS =~ /hotfix/
+#      when: never
+#    - if: $CI_MERGE_REQUEST_ID
+#    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+#  variables:
+#    KANIKO_EXTRA_ARGS: |
+#      --context .
+#      --dockerfile .deploy/storybook.dockerfile
+#      --destination ${ECR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/storybook:${CI_COMMIT_SHORT_SHA}
+#  needs:
+#    - ecr:pre-build-image
+#    - storybook:build
+#    - job: node_modules:pre
+#      optional: true
+#    - job: lint:test
+#      optional: true
+#    - job: unit:test
+#      optional: true
+#    - job: security:test
+#      optional: true
+
+terraform-plan-prod:pre-deploy:
+  stage: pre-deploy
+  extends:
+    - .tf_common
+    - .deploy_prod
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+  variables:
+    TF_VAR_NEXT_PUBLIC_WITH_ANALYTICS: ${NEXT_PUBLIC_WITH_ANALYTICS}
+    TF_VAR_NEXT_PUBLIC_CAPTCHA_V3_KEY: ${NEXT_PUBLIC_CAPTCHA_V3_KEY}
+    TF_VAR_NEXT_PUBLIC_SSR_API_HOST: ${NEXT_PUBLIC_SSR_API_HOST}
+    TF_VAR_NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST}
+    TF_VAR_NEXT_PUBLIC_WITH_SENTRY: ${NEXT_PUBLIC_WITH_SENTRY}
+    TF_VAR_NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+  script:
+    - terraform init -reconfigure
+    - terraform validate
+    - terraform plan -out="plan.cache" -lock=false
+    - terraform show -json "plan.cache" | jq -r "${JQ_PLAN}" > plan.json
+  artifacts:
+    name: prod
+    reports:
+      terraform: .deploy/terraform/${TF_VAR_env}/plan.json
+  needs: []
+
+#storybook:deploy:
+#  stage: deploy
+#  extends:
+#    - .deploy
+#  allow_failure: false
+#  rules:
+#    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+#      when: on_success
+#  variables:
+#    TF_VAR_env: storybook
+#    DEPLOY_ENVIRONMENT_URL: https://storybook.nicity.io/
+#  trigger:
+#    strategy: depend
+#    include:
+#      - local: .gitlab-ci.deploy.yml
+#  needs:
+#    - storybook:build-image
+
+la-dev-1:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: la-dev-1
+  variables:
+    TF_VAR_env: la-dev-1
+
+la-dev-2:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: la-dev-2
+  variables:
+    TF_VAR_env: la-dev-2
+
+la-dev-3:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: la-dev-3
+  variables:
+    TF_VAR_env: la-dev-3
+
+rnd-dev-1:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: rnd-dev-1
+  variables:
+    TF_VAR_env: rnd-dev-1
+
+mp-dev-1:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: mp-dev-1
+  variables:
+    TF_VAR_env: mp-dev-1
+
+mp-dev-2:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: mp-dev-2
+  variables:
+    TF_VAR_env: mp-dev-2
+
+pre-prod:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+  resource_group: pre-prod
+  allow_failure: false
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      when: on_success
+    - if: $CI_MERGE_REQUEST_LABELS =~ /hotfix/
+
+  variables:
+    TF_VAR_env: pre-prod
+
+prod:deploy:
+  stage: deploy
+  extends:
+    - .deploy
+    - .deploy_prod
+  resource_group: prod
+  allow_failure: false
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+      when: on_success
+    - if: $CI_MERGE_REQUEST_LABELS =~ /hotfix/
+  variables:
+    TF_VAR_env: prod
+    DEPLOY_ENVIRONMENT_URL: https://nicity.com/
+    AWS_DEFAULT_REGION: us-east-1
+    NEXT_PUBLIC_API_HOST: https://nicity.com
+    NEXT_PUBLIC_SSR_API_HOST: http://graphql.nicity-prod
+    NEXT_PUBLIC_WITH_ANALYTICS: "true"
+    NEXT_PUBLIC_CAPTCHA_V3_KEY: "6LdVeJohAAAAAIa79CAWaEbvPWiZtde7neShty3E"
+    NEXT_PUBLIC_WITH_SENTRY: "true"

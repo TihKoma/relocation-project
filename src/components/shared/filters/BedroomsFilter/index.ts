@@ -1,0 +1,1 @@
+export { BedroomsFilter } from './BedroomsFilter'

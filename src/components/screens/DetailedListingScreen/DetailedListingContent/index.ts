@@ -1,0 +1,1 @@
+export { DetailedListingContent } from './DetailedListingContent'
